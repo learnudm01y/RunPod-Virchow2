@@ -53,3 +53,15 @@ logs/**
 !logs/**/
 !logs/**/.gitkeep
 !logs/**/server.log
+
+# For outputs: ignore other dynamic files except .gitkeep
+output/**
+!output/**/
+!output/**/.gitkeep
+
+# For inputs: ignore other dynamic files except .gitkeep
+input/**
+!input/**/
+!input/**/.gitkeep
+
+

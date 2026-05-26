@@ -182,7 +182,7 @@ class APIClient:
                 "features_gdrive_folder_id": "",
                 "patch_count": patch_count,
                 "failed_patch_count": failed_patch_count,
-                "model_name": "TITAN",
+                "model_name": "Virchow2",
                 "model_version": "",
                 "error_message": error_message[:1000],
             },

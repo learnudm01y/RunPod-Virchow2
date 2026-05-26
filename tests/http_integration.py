@@ -18,6 +18,14 @@ os.environ["WORKSPACE_DIR"]  = str(Path(__file__).resolve().parent.parent)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# Dynamically patch httpx.Client.__init__ to avoid FastAPI/Starlette version conflict in this venv
+import httpx
+_original_init = httpx.Client.__init__
+def _patched_init(self, *args, **kwargs):
+    kwargs.pop("app", None)  # Remove 'app' keyword argument if present
+    _original_init(self, *args, **kwargs)
+httpx.Client.__init__ = _patched_init
+
 # Disable the actual job worker (don't load torch / Virchow2)
 import app.server as srv
 async def _noop_loop():
@@ -42,74 +50,73 @@ def check(name, cond, detail=""):
     else:
         FAIL += 1; print(f"  [ERR] {name} -- {detail}")
 
-client = TestClient(srv.app)
+with TestClient(srv.app) as client:
+    # ── 1. /health (public)
+    print("[1] GET /health (public)")
+    r = client.get("/health")
+    check("status 200", r.status_code == 200, f"got {r.status_code}")
+    check("success=true", r.json().get("success") is True)
+    check("service name", r.json().get("service") == "runpod-histo-virchow2")
 
-# ── 1. /health (public)
-print("[1] GET /health (public)")
-r = client.get("/health")
-check("status 200", r.status_code == 200, f"got {r.status_code}")
-check("success=true", r.json().get("success") is True)
-check("service name", r.json().get("service") == "runpod-histo-virchow2")
+    # ── 2. /jobs/start without token
+    print("\n[2] POST /jobs/start without token")
+    r = client.post("/jobs/start", json={})
+    check("status 401", r.status_code == 401, f"got {r.status_code}")
 
-# ── 2. /jobs/start without token
-print("\n[2] POST /jobs/start without token")
-r = client.post("/jobs/start", json={})
-check("status 401", r.status_code == 401, f"got {r.status_code}")
+    # ── 3. /jobs/start with WRONG token
+    print("\n[3] POST /jobs/start with wrong token")
+    r = client.post("/jobs/start", json={},
+                    headers={"Authorization": "Bearer wrong-secret"})
+    check("status 403", r.status_code == 403, f"got {r.status_code}")
 
-# ── 3. /jobs/start with WRONG token
-print("\n[3] POST /jobs/start with wrong token")
-r = client.post("/jobs/start", json={},
-                headers={"Authorization": "Bearer wrong-secret"})
-check("status 403", r.status_code == 403, f"got {r.status_code}")
+    # ── 4. /jobs/start with VALID token + valid Laravel payload
+    print("\n[4] POST /jobs/start with valid Laravel payload")
+    payload = {
+        "sample_id": 42,
+        "slide_id": "TCGA-A1-A0SD-01Z-00-DX1.svs",
+        "patch_size_px": 256,
+        "magnification": "20x",
+        "magnification_folder": "20x",
+        "gdrive_input_path": "samples/sliced_slides/20x/tcga/breast/TCGA-A1-A0SD/sample_42_256px",
+        "gdrive_input_archive": "patches.tar.gz",
+        "gdrive_output_path": "samples/features/Virchow2/20x/tcga/breast/TCGA-A1-A0SD/sample_42_256px",
+        "ai_model": {
+            "id": 2, "name": "Virchow2", "slug": "virchow2",
+            "huggingface": "paige-ai/Virchow2", "version": "v2.0",
+            "embedding_dim": "1280", "input_resolution": "224",
+        },
+        "callback": {
+            "url": "http://127.0.0.1:9999/api/v1/feature-extraction/report",
+            "token": "any-laravel-key",
+            "method": "POST",
+        },
+        "dispatched_at": "2026-05-09T12:00:00+00:00",
+    }
+    r = client.post("/jobs/start", json=payload,
+                    headers={"Authorization": "Bearer test-shared-secret-12345"})
+    check("status 200", r.status_code == 200, f"got {r.status_code} body={r.text[:200]}")
+    body = r.json() if r.status_code == 200 else {}
+    check("success=true", body.get("success") is True)
+    check("returns job_id (hex)", isinstance(body.get("job_id"), str) and len(body.get("job_id", "")) == 32)
+    check("returns sample_id=42", body.get("sample_id") == 42)
+    check("returns accepted_at",  isinstance(body.get("accepted_at"), str))
+    job_id = body.get("job_id", "")
 
-# ── 4. /jobs/start with VALID token + valid Laravel payload
-print("\n[4] POST /jobs/start with valid Laravel payload")
-payload = {
-    "sample_id": 42,
-    "slide_id": "TCGA-A1-A0SD-01Z-00-DX1.svs",
-    "patch_size_px": 256,
-    "magnification": "20x",
-    "magnification_folder": "20x",
-    "gdrive_input_path": "samples/sliced_slides/20x/tcga/breast/TCGA-A1-A0SD/sample_42_256px",
-    "gdrive_input_archive": "patches.tar.gz",
-    "gdrive_output_path": "samples/features/Virchow2/20x/tcga/breast/TCGA-A1-A0SD/sample_42_256px",
-    "ai_model": {
-        "id": 2, "name": "Virchow2", "slug": "virchow2",
-        "huggingface": "paige-ai/Virchow2", "version": "v2.0",
-        "embedding_dim": "1280", "input_resolution": "224",
-    },
-    "callback": {
-        "url": "http://127.0.0.1:9999/api/v1/feature-extraction/report",
-        "token": "any-laravel-key",
-        "method": "POST",
-    },
-    "dispatched_at": "2026-05-09T12:00:00+00:00",
-}
-r = client.post("/jobs/start", json=payload,
-                headers={"Authorization": "Bearer test-shared-secret-12345"})
-check("status 200", r.status_code == 200, f"got {r.status_code} body={r.text[:200]}")
-body = r.json() if r.status_code == 200 else {}
-check("success=true", body.get("success") is True)
-check("returns job_id (hex)", isinstance(body.get("job_id"), str) and len(body.get("job_id", "")) == 32)
-check("returns sample_id=42", body.get("sample_id") == 42)
-check("returns accepted_at",  isinstance(body.get("accepted_at"), str))
-job_id = body.get("job_id", "")
+    # ── 5. GET /jobs/{id} with auth
+    print("\n[5] GET /jobs/{id} with valid token")
+    r = client.get(f"/jobs/{job_id}",
+                   headers={"Authorization": "Bearer test-shared-secret-12345"})
+    check("status 200", r.status_code == 200, f"got {r.status_code}")
+    job = r.json().get("job", {})
+    check("job tracked", job.get("job_id") == job_id)
+    check("status=queued", job.get("status") == "queued")
+    check("sample_id=42",  job.get("sample_id") == 42)
 
-# ── 5. GET /jobs/{id} with auth
-print("\n[5] GET /jobs/{id} with valid token")
-r = client.get(f"/jobs/{job_id}",
-               headers={"Authorization": "Bearer test-shared-secret-12345"})
-check("status 200", r.status_code == 200, f"got {r.status_code}")
-job = r.json().get("job", {})
-check("job tracked", job.get("job_id") == job_id)
-check("status=queued", job.get("status") == "queued")
-check("sample_id=42",  job.get("sample_id") == 42)
-
-# ── 6. /jobs/start rejects malformed payload (Pydantic 422)
-print("\n[6] POST /jobs/start with missing fields (validation)")
-r = client.post("/jobs/start", json={"sample_id": 1},
-                headers={"Authorization": "Bearer test-shared-secret-12345"})
-check("status 422", r.status_code == 422, f"got {r.status_code}")
+    # ── 6. /jobs/start rejects malformed payload (Pydantic 422)
+    print("\n[6] POST /jobs/start with missing fields (validation)")
+    r = client.post("/jobs/start", json={"sample_id": 1},
+                    headers={"Authorization": "Bearer test-shared-secret-12345"})
+    check("status 422", r.status_code == 422, f"got {r.status_code}")
 
 print()
 print("=" * 60)

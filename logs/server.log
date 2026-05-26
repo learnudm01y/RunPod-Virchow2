@@ -1,0 +1,8 @@
+INFO:     Started server process [7014]
+INFO:     Waiting for application startup.
+2026-05-26T13:03:37 [INFO] titan_pipeline.server – Worker loop started. Queue ready.
+2026-05-26T13:03:37 [INFO] titan_pipeline.server – RUNPOD_POD_HOSTNAME not set — skipping self-registration.
+INFO:     Application startup complete.
+ERROR:    [Errno 48] error while attempting to bind on address ('0.0.0.0', 8000): address already in use
+INFO:     Waiting for appINFO:     127.0.0.1:49959 - "GET /health HTTP/1.1" 200 OK
+.

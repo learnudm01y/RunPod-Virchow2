@@ -1,0 +1,27 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+venv/
+.venv/
+
+# Deep learning models cache (very heavy!)
+models/
+models/cache/
+models/virchow2/
+
+# User data inputs (test patches)
+input/patches/*
+!input/patches/.gitkeep
+
+# User output features, manifests, and logs
+output/features/*
+!output/features/.gitkeep
+output/manifests/*
+!output/manifests/.gitkeep
+output/logs/*
+!output/logs/.gitkeep
+
+# System generated nested directories (if any)
+VIRCHOW2/

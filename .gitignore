@@ -1,27 +1,55 @@
-# Python cache
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+*$py.class
 
-# Virtual environment
-venv/
-.venv/
+# C extensions
+*.so
 
-# Deep learning models cache (very heavy!)
-models/
-models/cache/
-models/virchow2/
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
 
-# User data inputs (test patches)
-input/patches/*
-!input/patches/.gitkeep
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
 
-# User output features, manifests, and logs
-output/features/*
-!output/features/.gitkeep
-output/manifests/*
-!output/manifests/.gitkeep
-output/logs/*
-!output/logs/.gitkeep
+# Jupyter Notebook
+.ipynb_checkpoints
 
-# System generated nested directories (if any)
-VIRCHOW2/
+# VS Code / IDEs
+.vscode/
+.idea/
+.DS_Store
+
+# Keep directory structures but ignore nested files/data
+# For models: ignore all files but keep folder structure via .gitkeep
+models/**
+!models/**/
+!models/**/.gitkeep
+
+# For logs: ignore other dynamic files except .gitkeep and server.log
+logs/**
+!logs/**/
+!logs/**/.gitkeep
+!logs/**/server.log

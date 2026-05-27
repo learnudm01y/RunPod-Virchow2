@@ -14,6 +14,13 @@ echo "[start_both] ======================================================"
 
 mkdir -p /workspace/logs
 
+# ─── Load root credentials (API_KEY, HF_TOKEN, etc.) ─────────────────────────
+if [ -f /workspace/setup_env.sh ]; then
+    echo "[start_both] Sourcing /workspace/setup_env.sh for credentials..."
+    # shellcheck disable=SC1091
+    source /workspace/setup_env.sh
+fi
+
 # ─── Kill anything already on these ports ─────────────────────────────────────
 fuser -k 8000/tcp 2>/dev/null && echo "[start_both] Killed process on 8000" || true
 fuser -k 8001/tcp 2>/dev/null && echo "[start_both] Killed process on 8001" || true
@@ -30,6 +37,7 @@ git pull origin main --quiet
 
 # ─── Start Virchow2 on port 8000 (background) ─────────────────────────────────
 echo "[start_both] Starting Virchow2 on port 8000..."
+export PORT=8000
 source /workspace/RunPod-Virchow2/scripts/setup_env.sh
 cd /workspace/RunPod-Virchow2
 nohup uvicorn app.server:app --host 0.0.0.0 --port 8000 --workers 1 \
@@ -39,6 +47,7 @@ echo "[start_both] Virchow2 PID=${VIRCHOW2_PID}"
 
 # ─── Start TITAN on port 8001 (background) ────────────────────────────────────
 echo "[start_both] Starting TITAN on port 8001..."
+export PORT=8001
 source /workspace/RunPood-TITAN/scripts/setup_env.sh
 cd /workspace/RunPood-TITAN
 nohup uvicorn app.server:app --host 0.0.0.0 --port 8001 --workers 1 \

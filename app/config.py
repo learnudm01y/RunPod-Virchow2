@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 # ─── Workspace root (persistent volume on RunPod) ─────────────────────────────
-_default_workspace = "/workspace/VIRCHOW2"
+_default_workspace = "/workspace/RunPod-Virchow2"
 if not os.path.exists("/workspace"):
     _default_workspace = str(Path(__file__).resolve().parent.parent)
 

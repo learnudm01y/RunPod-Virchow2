@@ -31,6 +31,7 @@ export HF_TOKEN="${HF_TOKEN:-}"
 # API_KEY      : Bearer token that Laravel uses to authenticate callbacks
 #                (matches servers_names.api_key for this RunPod server row)
 export API_BASE_URL="${API_BASE_URL:-https://ai.histopathology.cloud}"
+export LARAVEL_BASE_URL="${API_BASE_URL}"   # alias used by server.py self-registration
 # Set API_KEY before sourcing this file, or export it manually:
 #   export API_KEY="your-laravel-api-key"
 export API_KEY="${API_KEY:-}"

@@ -22,9 +22,18 @@ echo "  (first run: ~2.5 GB download; subsequent runs are instant)"
 
 mkdir -p "${LOCAL_DIR}" "${HF_CACHE}"
 
-# Delegate to Python script (avoids heredoc CRLF issues)
+# Delegate to Python scripts (avoids heredoc CRLF issues)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON="${WORKSPACE_DIR:-/workspace/RunPod-Virchow2}/venv/bin/python"
 [ -x "$PYTHON" ] || PYTHON="$(command -v python3)"
 
-"$PYTHON" "${SCRIPT_DIR}/download_virchow2.py"
+# If model weights already exist locally → build HF cache from local files
+# (no HF access needed; uses hard-links so no extra disk space)
+# Otherwise → download from HuggingFace Hub (requires valid HF_TOKEN with model access)
+if [ -f "${LOCAL_DIR}/model.safetensors" ]; then
+    echo "  model.safetensors found locally – populating HF cache without re-downloading"
+    "$PYTHON" "${SCRIPT_DIR}/populate_hf_cache.py"
+else
+    echo "  Weights not found – downloading from HuggingFace Hub..."
+    "$PYTHON" "${SCRIPT_DIR}/download_virchow2.py"
+fi

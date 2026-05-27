@@ -6,19 +6,20 @@
 #   bash /workspace/RunPod-Virchow2/scripts/start_both.sh
 # =============================================================================
 
-set -euo pipefail
+# NO set -e here — we must not exit on minor errors or the container stops
 
 echo "[start_both] ======================================================"
 echo "[start_both] Starting Virchow2 (8000) + TITAN (8001)"
 echo "[start_both] ======================================================"
 
 mkdir -p /workspace/logs
+touch /workspace/logs/virchow2.log /workspace/logs/titan.log
 
 # ─── Load root credentials (API_KEY, HF_TOKEN, etc.) ─────────────────────────
 if [ -f /workspace/setup_env.sh ]; then
     echo "[start_both] Sourcing /workspace/setup_env.sh for credentials..."
     # shellcheck disable=SC1091
-    source /workspace/setup_env.sh
+    source /workspace/setup_env.sh || true
 fi
 
 # ─── Kill anything already on these ports ─────────────────────────────────────
@@ -28,36 +29,34 @@ sleep 1
 
 # ─── Pull latest code ─────────────────────────────────────────────────────────
 echo "[start_both] Pulling Virchow2..."
-cd /workspace/RunPod-Virchow2
-git pull origin main --quiet
+cd /workspace/RunPod-Virchow2 && git pull origin main --quiet 2>/dev/null || true
 
 echo "[start_both] Pulling TITAN..."
-cd /workspace/RunPood-TITAN
-git pull origin main --quiet
+cd /workspace/RunPood-TITAN && git pull origin main --quiet 2>/dev/null || true
 
 # ─── Start Virchow2 on port 8000 (background) ─────────────────────────────────
 echo "[start_both] Starting Virchow2 on port 8000..."
 export PORT=8000
-source /workspace/RunPod-Virchow2/scripts/setup_env.sh
+source /workspace/RunPod-Virchow2/scripts/setup_env.sh 2>/dev/null || true
 cd /workspace/RunPod-Virchow2
 nohup uvicorn app.server:app --host 0.0.0.0 --port 8000 --workers 1 \
-    > /workspace/logs/virchow2.log 2>&1 &
+    >> /workspace/logs/virchow2.log 2>&1 &
 VIRCHOW2_PID=$!
 echo "[start_both] Virchow2 PID=${VIRCHOW2_PID}"
 
 # ─── Start TITAN on port 8001 (background) ────────────────────────────────────
 echo "[start_both] Starting TITAN on port 8001..."
 export PORT=8001
-source /workspace/RunPood-TITAN/scripts/setup_env.sh
+source /workspace/RunPood-TITAN/scripts/setup_env.sh 2>/dev/null || true
 cd /workspace/RunPood-TITAN
 nohup uvicorn app.server:app --host 0.0.0.0 --port 8001 --workers 1 \
-    > /workspace/logs/titan.log 2>&1 &
+    >> /workspace/logs/titan.log 2>&1 &
 TITAN_PID=$!
 echo "[start_both] TITAN PID=${TITAN_PID}"
 
-echo "[start_both] Both servers started. Tailing logs (Ctrl+C to detach)..."
+echo "[start_both] Both servers started."
 echo "[start_both] Virchow2 log: /workspace/logs/virchow2.log"
 echo "[start_both] TITAN log:    /workspace/logs/titan.log"
 
-# Tail both logs — keeps the process alive so RunPod doesn't kill the pod
+# Keep container alive — tail both logs so RunPod doesn't stop the pod
 tail -f /workspace/logs/virchow2.log /workspace/logs/titan.log

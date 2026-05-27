@@ -45,8 +45,8 @@ if [ -d "/workspace" ]; then
 else
     WORKSPACE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 fi
-WORKSPACE="${WORKSPACE_DIR:-${WORKSPACE_ROOT}/VIRCHOW2}"
-PROJECT_DIR="${WORKSPACE}"   # the git repo lives in /workspace/VIRCHOW2
+WORKSPACE="${WORKSPACE_DIR:-${WORKSPACE_ROOT}/RunPod-Virchow2}"
+PROJECT_DIR="${WORKSPACE}"   # the git repo lives in /workspace/RunPod-Virchow2
 MODEL_DIR="${WORKSPACE}/models/virchow2"
 VENV_DIR="${WORKSPACE}/venv"
 RCLONE_CONF="${HOME:-/root}/.config/rclone/rclone.conf"
@@ -138,20 +138,20 @@ section "3. MODEL WEIGHTS  (Virchow2)"
 check_path "${MODEL_DIR}" "models/virchow2/"
 
 if [ -d "${MODEL_DIR}" ]; then
-    # Key weight files for Virchow2
-    for f in "model.safetensors" "config.json" "preprocessor_config.json"; do
+    # Key weight files for Virchow2 (timm model – no preprocessor_config.json needed)
+    for f in "model.safetensors" "config.json"; do
         fp="${MODEL_DIR}/${f}"
         if [ -f "$fp" ]; then
             sz=$(du -sh "$fp" 2>/dev/null | awk '{print $1}')
             pass "models/virchow2/${f}  (${sz})"
         else
-            fail "models/virchow2/${f}  →  MISSING"
+            fail "models/virchow2/${f}  \u2192  MISSING"
         fi
     done
 
     # Total model directory size
     total=$(du -sh "${MODEL_DIR}" 2>/dev/null | awk '{print $1}')
-    info "Total model directory size: ${total}  (expected ≈ 2.4 GB)"
+    info "Total model directory size: ${total}  (safetensors \u2248 2.4 GB + bin duplicate = \u2248 4.8 GB normal)"
 
     # Check model.safetensors is at least 2 GB (full weights)
     if [ -f "${MODEL_DIR}/model.safetensors" ]; then
@@ -172,14 +172,14 @@ fi
 section "4. PYTHON ENVIRONMENT"
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Determine python binary
+# Determine python binary – prefer venv on persistent disk
 if [ -x "${VENV_DIR}/bin/python" ]; then
     PYTHON="${VENV_DIR}/bin/python"
     pass "venv python found: ${PYTHON}"
 elif command -v python3 &>/dev/null; then
     PYTHON="python3"
-    warn "No venv found – using system python3: $(which python3)"
-    warn "Recommended: create venv at ${VENV_DIR}"
+    fail "No venv found at ${VENV_DIR}"  
+    info "Fix: bash ${PROJECT_DIR}/scripts/first_run_setup.sh"
 else
     fail "No python3 found on PATH"
     PYTHON=""

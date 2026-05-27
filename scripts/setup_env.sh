@@ -12,8 +12,10 @@
 # =============================================================================
 
 # ─── Workspace layout ────────────────────────────────────────────────────────
+# WORKSPACE_ROOT : the persistent network disk mounted at /workspace
+# WORKSPACE_DIR  : the project directory (git repo lives here)
 export WORKSPACE_ROOT="/workspace"
-export WORKSPACE_DIR="${WORKSPACE_ROOT}/VIRCHOW2"
+export WORKSPACE_DIR="${WORKSPACE_ROOT}/RunPod-Virchow2"
 export HF_HOME="${WORKSPACE_DIR}/models/cache"
 export HF_HUB_CACHE="${HF_HOME}/hub"
 export TRANSFORMERS_CACHE="${HF_HOME}"
@@ -62,11 +64,25 @@ if [ -f "${RCLONE_SRC}" ] && [ ! -f "${RCLONE_DST}" ]; then
     echo "[setup_env] Restored rclone.conf from ${RCLONE_SRC}"
 fi
 
+# ─── Activate venv if present (packages persist on network disk) ─────────────
+VENV_PYTHON="${WORKSPACE_DIR}/venv/bin/python"
+if [ -x "${VENV_PYTHON}" ]; then
+    source "${WORKSPACE_DIR}/venv/bin/activate"
+    echo "[setup_env] venv activated: ${WORKSPACE_DIR}/venv"
+else
+    echo "[setup_env] WARN: venv not found – run first_run_setup.sh once"
+fi
+
+# ─── Warn about required secrets ─────────────────────────────────────────────
+[ -z "${API_KEY}" ]         && echo "[setup_env] WARN: API_KEY not set – add it to RunPod template env vars"
+[ -z "${HF_TOKEN}" ]        && echo "[setup_env] WARN: HF_TOKEN not set – add it to RunPod template env vars"
+
 echo "[setup_env] Environment ready."
 echo "  WORKSPACE_DIR   = ${WORKSPACE_DIR}"
 echo "  API_BASE_URL    = ${API_BASE_URL}"
 echo "  RCLONE_REMOTE   = ${RCLONE_REMOTE}"
 echo "  HF_TOKEN        = ${HF_TOKEN:0:6}***"
 echo ""
-echo "  Run verification:  bash ${WORKSPACE_DIR}/scripts/verify_full_system.sh"
-echo "  Start server:      bash ${WORKSPACE_DIR}/scripts/start_server.sh"
+echo "  First time only: bash ${WORKSPACE_DIR}/scripts/first_run_setup.sh"
+echo "  Run verification: bash ${WORKSPACE_DIR}/scripts/verify_full_system.sh"
+echo "  Start server:     bash ${WORKSPACE_DIR}/scripts/start_server.sh"

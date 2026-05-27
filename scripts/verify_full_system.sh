@@ -561,11 +561,17 @@ try:
     transforms = create_transform(**resolve_data_config(model.pretrained_cfg, model=model))
     print(f"  {GREEN}[PASS]{RESET}  Virchow2 loaded successfully")
 
-    # Quick forward pass with dummy data
+    # Quick forward pass with dummy data – mirrors extractor.py exactly
     dummy = torch.zeros(1, 3, 224, 224, device=device)
     with torch.inference_mode():
-        out = model(dummy)
-    emb_dim = out.shape[-1]
+        out = model(dummy)   # (1, T, 1280) – full sequence (CLS + registers + patches)
+
+    # Reproduce the extractor.py embedding: class_token ⊕ mean(rest) = 2560
+    class_token  = out[:, 0]     # (1, 1280)
+    patch_tokens = out[:, 1:]    # (1, T-1, 1280)
+    embedding    = torch.cat([class_token, patch_tokens.mean(1)], dim=-1)  # (1, 2560)
+
+    emb_dim = embedding.shape[-1]
     print(f"  {GREEN}[PASS]{RESET}  Forward pass OK – output embedding dim: {emb_dim}  (expected 2560)")
     if emb_dim == 2560:
         print(f"  {GREEN}[PASS]{RESET}  Embedding dimension is correct (2560)")

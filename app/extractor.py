@@ -112,10 +112,10 @@ def extract_features(patches_dir: str) -> dict:
 
             with torch.inference_mode(), \
                  torch.autocast(device_type="cuda" if device == "cuda" else "cpu", dtype=torch.float16 if device == "cuda" else torch.float32):
-                output = model(tensor)   # (1, 257, 1280)
+                output = model(tensor)   # (1, 261, 1280)  = 1 CLS + 4 registers + 256 patches
 
             class_token  = output[:, 0]       # (1, 1280)
-            patch_tokens = output[:, 1:]      # (1, 256, 1280)
+            patch_tokens = output[:, 1:]      # (1, 260, 1280)
             embedding    = torch.cat(
                 [class_token, patch_tokens.mean(1)], dim=-1
             )   # (1, 2560)

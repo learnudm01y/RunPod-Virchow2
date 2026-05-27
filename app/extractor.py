@@ -27,7 +27,7 @@ def load_model():
     """
     Load Virchow2 from local cache if available,
     otherwise download from HuggingFace.
-    Model is cached at /workspace/VIRCHOW2/models/virchow2/
+    Model is cached at /workspace/RunPod-Virchow2/models/virchow2/
     """
     global _model, _transforms
 
@@ -36,22 +36,22 @@ def load_model():
 
     hf_token = os.environ.get("HF_TOKEN")
     if hf_token:
-        login(token=hf_token)
+        login(token=hf_token, add_to_git_credential=False)
 
-    workspace_dir = os.environ.get("WORKSPACE_DIR", "/workspace/VIRCHOW2")
-    # If testing locally and /workspace/VIRCHOW2 doesn't exist, fallback to the current script's parent's parent dir
-    if workspace_dir == "/workspace/VIRCHOW2" and not os.path.exists("/workspace"):
+    workspace_dir = os.environ.get("WORKSPACE_DIR", "/workspace/RunPod-Virchow2")
+    # Fallback for local dev outside RunPod
+    if not os.path.exists("/workspace"):
         workspace_dir = str(Path(__file__).resolve().parent.parent)
 
-    local_path = f"{workspace_dir}/models/virchow2"
+    # HF cache dir (blob format used by timm hf-hub: loader)
+    hf_cache = os.environ.get("HF_HUB_CACHE", f"{workspace_dir}/models/cache/hub")
+    virchow2_cache = os.path.join(hf_cache, "models--paige-ai--Virchow2")
 
-    # Try local first, fall back to HuggingFace
-    if os.path.exists(f"{local_path}/model.safetensors"):
-        print(f"Loading Virchow2 from local cache: {local_path}")
-        model_source = f"hf-hub:{local_path}"
+    if os.path.exists(virchow2_cache):
+        print(f"Loading Virchow2 from HF cache (offline): {virchow2_cache}")
+        os.environ.setdefault("HF_HUB_OFFLINE", "1")
     else:
         print(f"Downloading Virchow2 from HuggingFace: {HF_MODEL_ID}")
-        model_source = f"hf-hub:{HF_MODEL_ID}"
 
     device = "cuda" if torch.cuda.is_available() else ("mps" if hasattr(torch.backends, "mps") and torch.backends.mps.is_available() else "cpu")
 

@@ -293,7 +293,7 @@ if [ -f "${RCLONE_CONF}" ]; then
     # Test connectivity to the GDrive remote
     REMOTE="${RCLONE_REMOTE:-gdrive}"
     info "Testing connectivity to remote '${REMOTE}' ..."
-    if timeout 30 rclone lsd "${REMOTE}:" --max-depth 1 &>/dev/null; then
+    if timeout 60 rclone lsd "${REMOTE}:" --max-depth 1 &>/dev/null; then
         pass "rclone can list '${REMOTE}:' (Google Drive is reachable)"
     else
         fail "Cannot reach '${REMOTE}:' – check rclone.conf token or network"
@@ -522,6 +522,24 @@ if [ -n "${PYTHON:-}" ] && [ -f "${MODEL_DIR}/model.safetensors" ]; then
     timeout 120 "${PYTHON}" - <<'PYEOF'
 import sys, os
 RED="\033[0;31m"; GREEN="\033[0;32m"; YELLOW="\033[1;33m"; CYAN="\033[0;36m"; RESET="\033[0m"
+
+# ─── Authenticate with HuggingFace (required for gated model) ────────────────
+hf_token = os.environ.get("HF_TOKEN", "")
+if hf_token:
+    try:
+        from huggingface_hub import login
+        login(token=hf_token, add_to_git_credential=False)
+    except Exception as _e:
+        print(f"  {YELLOW}[WARN]{RESET}  HF login: {_e}")
+else:
+    print(f"  {YELLOW}[WARN]{RESET}  HF_TOKEN not set – gated model may fail")
+
+# ─── Enable offline mode if HF cache exists ──────────────────────────────────
+workspace = os.environ.get("WORKSPACE_DIR", "/workspace/RunPod-Virchow2")
+hf_cache = os.environ.get("HF_HUB_CACHE", f"{workspace}/models/cache/hub")
+if os.path.exists(os.path.join(hf_cache, "models--paige-ai--Virchow2")):
+    os.environ["HF_HUB_OFFLINE"] = "1"
+    print(f"  {CYAN}[INFO]{RESET}  HF cache found – using offline mode")
 
 try:
     import torch

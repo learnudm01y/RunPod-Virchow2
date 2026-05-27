@@ -22,27 +22,9 @@ echo "  (first run: ~2.5 GB download; subsequent runs are instant)"
 
 mkdir -p "${LOCAL_DIR}" "${HF_CACHE}"
 
-"${WORKSPACE_DIR:-/workspace/RunPod-Virchow2}/venv/bin/python" 2>/dev/null - <<PYEOF || python3 - <<PYEOF
-from huggingface_hub import snapshot_download, login
-import os
+# Delegate to Python script (avoids heredoc CRLF issues)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PYTHON="${WORKSPACE_DIR:-/workspace/RunPod-Virchow2}/venv/bin/python"
+[ -x "$PYTHON" ] || PYTHON="$(command -v python3)"
 
-hf_token = os.environ.get("HF_TOKEN", "")
-if hf_token:
-    login(token=hf_token, add_to_git_credential=False)
-
-hf_cache  = os.environ.get("HF_HUB_CACHE",  "${HF_CACHE}")
-local_dir = "${LOCAL_DIR}"
-
-# cache_dir  → blob format in HF cache (allows offline loading by timm)
-# local_dir  → flat copy for direct file access
-snapshot_download(
-    repo_id="paige-ai/Virchow2",
-    cache_dir=hf_cache,
-    local_dir=local_dir,
-    local_dir_use_symlinks=False,
-    token=hf_token or None,
-)
-print("Virchow2 downloaded successfully")
-print(f"  HF cache populated at: {hf_cache}/models--paige-ai--Virchow2")
-print(f"  Flat copy at:          {local_dir}")
-PYEOF
+"$PYTHON" "${SCRIPT_DIR}/download_virchow2.py"

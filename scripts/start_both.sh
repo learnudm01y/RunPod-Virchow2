@@ -25,7 +25,7 @@ cd /workspace/RunPod-Virchow2
 git pull origin main --quiet
 
 echo "[start_both] Pulling TITAN..."
-cd /workspace/RunPood-histo-TITAN
+cd /workspace/RunPood-TITAN
 git pull origin main --quiet
 
 # ─── Start Virchow2 on port 8000 (background) ─────────────────────────────────
@@ -39,8 +39,8 @@ echo "[start_both] Virchow2 PID=${VIRCHOW2_PID}"
 
 # ─── Start TITAN on port 8001 (background) ────────────────────────────────────
 echo "[start_both] Starting TITAN on port 8001..."
-source /workspace/RunPood-histo-TITAN/scripts/setup_env.sh
-cd /workspace/RunPood-histo-TITAN
+source /workspace/RunPood-TITAN/scripts/setup_env.sh
+cd /workspace/RunPood-TITAN
 nohup uvicorn app.server:app --host 0.0.0.0 --port 8001 --workers 1 \
     > /workspace/logs/titan.log 2>&1 &
 TITAN_PID=$!
